@@ -15,32 +15,37 @@ import sqlite3
 from typing import List, Dict, Optional
 from fastapi import FastAPI, Query, Response, status
 from pydantic import BaseModel
+DB_PATH = 'data/todoobydo.sqlite'
+
 app = FastAPI()
-db_conn = sqlite3.connect('data/todoobydo.sqlite')
-# db_conn.row_factory = sqlite3.Row  # Make sqlite output records with headers
-cursor = db_conn.cursor()
-db_conn.execute(
-    "CREATE TABLE if not exists items \
-    (id integer primary key, description text, done text)"
-)
-db_conn.commit()
-db_conn.close()
 
 
 class Item(BaseModel):
+    id: int
     description: str
     done: str = 'No'
-    id: Optional[int] = 0
 
 
 class ItemIn(BaseModel):
     description: str
 
 
+@app.on_event("startup")
+def startup_event():
+    db_conn = sqlite3.connect(DB_PATH)
+    cursor = db_conn.cursor()
+    db_conn.execute(
+        "CREATE TABLE if not exists items \
+        (id integer primary key, description text, done text)"
+    )
+    db_conn.commit()
+    db_conn.close()
+
+
 @app.post("/items/", status_code=status.HTTP_201_CREATED)
 def post_item(item: ItemIn) -> int:
     item.done = 'No'
-    db_conn = sqlite3.connect('data/todoobydo.sqlite')
+    db_conn = sqlite3.connect(DB_PATH)
     db_conn.row_factory = sqlite3.Row
     cursor = db_conn.cursor()
     query = "INSERT INTO items(description, done) VALUES (?, ?)"
@@ -52,7 +57,7 @@ def post_item(item: ItemIn) -> int:
 
 @app.get("/items/all", status_code=status.HTTP_200_OK)
 def get_all_items(response: Response) -> List[dict]:
-    db_conn = sqlite3.connect('data/todoobydo.sqlite')
+    db_conn = sqlite3.connect(DB_PATH)
     db_conn.row_factory = sqlite3.Row
     cursor = db_conn.cursor()
     query = "SELECT id, description, done FROM items"
@@ -70,7 +75,7 @@ def get_all_items(response: Response) -> List[dict]:
 
 @app.get("/items/{item_id}", status_code=status.HTTP_200_OK)
 def get_item(item_id: int, response: Response) -> dict:
-    db_conn = sqlite3.connect('data/todoobydo.sqlite')
+    db_conn = sqlite3.connect(DB_PATH)
     db_conn.row_factory = sqlite3.Row
     cursor = db_conn.cursor()
     query = "SELECT id, description, done FROM items WHERE id=?"
@@ -86,7 +91,7 @@ def get_item(item_id: int, response: Response) -> dict:
 
 @app.get("/items/{item_id}/status", status_code=status.HTTP_200_OK)
 async def get_item_status(item_id: int, response: Response) -> dict:
-    db_conn = sqlite3.connect('data/todoobydo.sqlite')
+    db_conn = sqlite3.connect(DB_PATH)
     db_conn.row_factory = sqlite3.Row
     cursor = db_conn.cursor()
     query = "SELECT id, description, done FROM items WHERE id=?"
@@ -109,7 +114,7 @@ def update_item_status(
     response: Response,
     done: str = Query('No', regex=r"(Yes|No)")
 ) -> dict:
-    db_conn = sqlite3.connect('data/todoobydo.sqlite')
+    db_conn = sqlite3.connect(DB_PATH)
     db_conn.row_factory = sqlite3.Row
     cursor = db_conn.cursor()
     query = "SELECT id, description, done FROM items WHERE id=?"
@@ -131,7 +136,7 @@ def update_item_status(
 
 @app.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_item(item_id: int) -> Dict[str, int]:
-    db_conn = sqlite3.connect('data/todoobydo.sqlite')
+    db_conn = sqlite3.connect(DB_PATH)
     db_conn.row_factory = sqlite3.Row
     cursor = db_conn.cursor()
     query_del = "DELETE FROM items WHERE id=?"
