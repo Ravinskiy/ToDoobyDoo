@@ -33,7 +33,6 @@ class ItemIn(BaseModel):
 @app.on_event("startup")
 def startup_event():
     db_conn = sqlite3.connect(DB_PATH)
-    cursor = db_conn.cursor()
     db_conn.execute(
         "CREATE TABLE if not exists items \
         (id integer primary key, description text, done text)"
@@ -43,7 +42,7 @@ def startup_event():
 
 
 @app.post("/items/", status_code=status.HTTP_201_CREATED)
-def post_item(item: ItemIn) -> int:
+def post_item(item: Item) -> int:
     item.done = 'No'
     db_conn = sqlite3.connect(DB_PATH)
     db_conn.row_factory = sqlite3.Row
@@ -90,7 +89,7 @@ def get_item(item_id: int, response: Response) -> dict:
 
 
 @app.get("/items/{item_id}/status", status_code=status.HTTP_200_OK)
-async def get_item_status(item_id: int, response: Response) -> dict:
+def get_item_status(item_id: int, response: Response) -> dict:
     db_conn = sqlite3.connect(DB_PATH)
     db_conn.row_factory = sqlite3.Row
     cursor = db_conn.cursor()
